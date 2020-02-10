@@ -1,5 +1,7 @@
 const models = require('../database/models');
 
+
+//create a new post
 const createPost = async (req, res) => {
   try {
     const post = await models.Post.create(req.body);
@@ -11,6 +13,8 @@ const createPost = async (req, res) => {
   }
 }
 
+
+//get all the stored posts
 const getAllPosts = async (req, res) => {
   try {
     const posts = await models.Post.findAll({
@@ -32,9 +36,78 @@ const getAllPosts = async (req, res) => {
 }
 
 
+//query a post by id
+const getPostById = async (req, res) => {
+  try {
+    const { postId } = req.params;
+    const post = await models.Post.findOne({
+      where: { id: postId },
+      include: [
+        {
+          model: models.Comment,
+          as: 'comments',
+          include: [
+           {
+            model: models.User,
+            as: 'author',
+           }
+          ]
+        },
+        {
+          model: models.User,
+          as: 'author'
+        }
+      ]
+    });
+    if (post) {
+      return res.status(200).json({ post });
+    }
+    return res.status(404).send('Post with the specified ID does not exists');
+  } catch (error) {
+    return res.status(500).send(error.message);
+  }
+}
+
+
+//update a post
+const updatePost = async (req, res) => {
+  try {
+    const { postId } = req.params;
+    const [ updated ] = await models.Post.update(req.body, {
+      where: { id: postId }
+    });
+    if (updated) {
+      const updatedPost = await models.Post.findOne({ where: { id: postId } });
+      return res.status(200).json({ post: updatedPost });
+    }
+    throw new Error('Post not found');
+  } catch (error) {
+    return res.status(500).send(error.message);
+  }
+};
+
+
+//deleting a post
+const deletePost = async (req, res) => {
+  try {
+    const { postId } = req.params;
+    const deleted = await models.Post.destroy({
+      where: { id: postId }
+    });
+    if (deleted) {
+      return res.status(204).send("Post deleted");
+    }
+    throw new Error("Post not found");
+  } catch (error) {
+    return res.status(500).send(error.message);
+  }
+};
 
 
 module.exports = {
   createPost,
-  getAllPosts
+  getAllPosts,
+  getPostById,
+  updatePost,
+  deletePost
 }
